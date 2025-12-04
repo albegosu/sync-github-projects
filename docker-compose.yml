@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  sync-service:
+    build: .
+    container_name: github-calendar-sync
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./tokens:/app/tokens
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+
+
