@@ -452,19 +452,32 @@ export class SyncService {
 
   /**
    * Determine project item start date
+   * Priority: Meeting Date > Target Date > Updated Date
    */
   private determineProjectItemStart(item: GithubProjectItem): any {
     const content = item.content;
+    const fieldValues = item.fieldValues || {};
     
-    // Use due date from field values if available
-    if (item.fieldValues?.dueDate) {
-      const dueDate = new Date(item.fieldValues.dueDate);
+    // Priority 1: Meeting Date
+    if (fieldValues['Meeting Date']) {
+      const meetingDate = new Date(fieldValues['Meeting Date']);
+      this.logger.log(`Using Meeting Date for ${content.title}: ${fieldValues['Meeting Date']}`);
       return {
-        date: dueDate.toISOString().split('T')[0],
+        date: meetingDate.toISOString().split('T')[0],
+      };
+    }
+    
+    // Priority 2: Target Date
+    if (fieldValues['Target Date']) {
+      const targetDate = new Date(fieldValues['Target Date']);
+      this.logger.log(`Using Target Date for ${content.title}: ${fieldValues['Target Date']}`);
+      return {
+        date: targetDate.toISOString().split('T')[0],
       };
     }
 
-    // Otherwise use updated date
+    // Priority 3: Updated Date (fallback)
+    this.logger.log(`Using Updated Date for ${content.title}: ${content.updatedAt}`);
     const startDate = new Date(content.updatedAt);
     return {
       dateTime: startDate.toISOString(),

@@ -33,10 +33,9 @@ export interface GithubProjectItem {
   // Draft issue fields (when type is DRAFT_ISSUE)
   draftTitle?: string;
   draftBody?: string;
+  // Custom field values from GitHub Projects
   fieldValues?: {
-    status?: string;
-    priority?: string;
-    dueDate?: string;
+    [key: string]: string; // Dynamic field values (Meeting Date, Target Date, Status, etc.)
   };
   project: {
     id: string;

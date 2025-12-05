@@ -169,6 +169,34 @@ export class GithubProjectsService {
               nodes {
                 id
                 type
+                fieldValues(first: 20) {
+                  nodes {
+                    ... on ProjectV2ItemFieldDateValue {
+                      field {
+                        ... on ProjectV2Field {
+                          name
+                        }
+                      }
+                      date
+                    }
+                    ... on ProjectV2ItemFieldTextValue {
+                      field {
+                        ... on ProjectV2Field {
+                          name
+                        }
+                      }
+                      text
+                    }
+                    ... on ProjectV2ItemFieldSingleSelectValue {
+                      field {
+                        ... on ProjectV2SingleSelectField {
+                          name
+                        }
+                      }
+                      name
+                    }
+                  }
+                }
                 content {
                   ... on Issue {
                     id
@@ -280,6 +308,28 @@ export class GithubProjectsService {
       type: item.type,
       project,
     };
+
+    // Extract field values (dates, status, priority, etc.)
+    const fieldValues: any = {};
+    if (item.fieldValues?.nodes) {
+      for (const fieldValue of item.fieldValues.nodes) {
+        const fieldName = fieldValue.field?.name;
+        if (!fieldName) continue;
+
+        if (fieldValue.date) {
+          // Date field
+          fieldValues[fieldName] = fieldValue.date;
+        } else if (fieldValue.text) {
+          // Text field
+          fieldValues[fieldName] = fieldValue.text;
+        } else if (fieldValue.name) {
+          // Single select field (like Status)
+          fieldValues[fieldName] = fieldValue.name;
+        }
+      }
+    }
+
+    transformed.fieldValues = fieldValues;
 
     if (item.content) {
       if (item.type === 'DRAFT_ISSUE') {
