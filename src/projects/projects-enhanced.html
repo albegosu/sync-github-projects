@@ -1,17 +1,3 @@
-import { Controller, Get, Post, Body, Query, Res } from '@nestjs/common';
-import { Response } from 'express';
-import { ProjectsService } from './projects.service';
-
-@Controller('projects')
-export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
-
-  /**
-   * Get web UI for project and task selection
-   */
-  @Get()
-  getProjectsUI(@Res() res: Response) {
-    const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,6 +23,38 @@ export class ProjectsController {
             margin: 0 auto;
         }
         
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+        
+        h2 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .subtitle {
+            color: #4a5568;
+        }
+        
+        .config-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 2rem;
+        }
+        
         .two-column {
             display: grid;
             grid-template-columns: 400px 1fr;
@@ -59,38 +77,6 @@ export class ProjectsController {
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             max-height: 70vh;
             overflow-y: auto;
-        }
-        
-        h2 {
-            color: #2d3748;
-            margin-bottom: 1rem;
-            font-size: 1.3rem;
-        }
-        
-        .header {
-            background: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-        
-        h1 {
-            color: #2d3748;
-            margin-bottom: 0.5rem;
-        }
-        
-        .subtitle {
-            color: #4a5568;
-        }
-        
-        .config-section {
-            background: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            margin-bottom: 2rem;
         }
         
         .input-group {
@@ -151,6 +137,17 @@ export class ProjectsController {
         .project-item.selected {
             border-color: #667eea;
             background: #e6f2ff;
+        }
+        
+        .project-title {
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .project-meta {
+            font-size: 0.85rem;
+            color: #718096;
         }
         
         .task-item {
@@ -219,49 +216,10 @@ export class ProjectsController {
             color: #742a2a;
         }
         
-        .project-title {
-            color: #2d3748;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            font-size: 1.1rem;
-        }
-        
-        .project-meta {
-            font-size: 0.85rem;
-            color: #718096;
-        }
-        
-        .task-actions {
-            margin-bottom: 1rem;
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-        
-        .task-actions button {
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-        }
-        
-        .selection-badge {
-            background: #667eea;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: #718096;
-        }
-        
         .loading {
             text-align: center;
-            padding: 3rem;
-            color: white;
-            font-size: 1.2rem;
+            padding: 2rem;
+            color: #4a5568;
         }
         
         .error {
@@ -288,10 +246,47 @@ export class ProjectsController {
             padding: 1rem 2rem;
             font-size: 1.1rem;
             box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            z-index: 1000;
         }
         
         .sync-button:hover {
             background: #38a169;
+        }
+        
+        .selection-badge {
+            background: #667eea;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 1rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #718096;
+        }
+        
+        .task-actions {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .task-actions button {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .back-button {
+            background: #718096;
+            margin-right: 1rem;
+        }
+        
+        .back-button:hover {
+            background: #4a5568;
         }
     </style>
 </head>
@@ -366,7 +361,7 @@ export class ProjectsController {
                 if (data.projects && data.projects.length > 0) {
                     document.getElementById('mainContent').style.display = 'grid';
                     displayProjects(data.projects);
-                    showMessage(\`Found \${data.projects.length} projects! Click on a project to view tasks.\`, 'success');
+                    showMessage(\`Found \${data.projects.length} projects!\`, 'success');
                 } else {
                     showMessage('No projects found for this user/organization', 'error');
                 }
@@ -572,85 +567,20 @@ export class ProjectsController {
             }
         }
         
-        function selectAllTasks() {
-            selectedTasks = new Set(allTasks.map(t => t.id));
-            document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = true);
-            updateTaskVisuals();
-            updateTaskCount();
-        }
-        
-        function deselectAllTasks() {
-            selectedTasks.clear();
-            document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = false);
-            updateTaskVisuals();
-            updateTaskCount();
-        }
-        
-        function updateTaskCount() {
-            const count = selectedTasks.size;
-            const total = allTasks.length;
-            document.getElementById('taskCount').textContent = \`\${count} of \${total} tasks selected\`;
-            
-            if (count > 0) {
-                document.getElementById('syncButton').style.display = 'block';
-            } else {
-                document.getElementById('syncButton').style.display = 'none';
-            }
-        }
-        
         function showMessage(text, type) {
             const messageDiv = document.getElementById('message');
             messageDiv.className = type;
             messageDiv.textContent = text;
         }
         
-        // Placeholder - see projects-enhanced.html for full implementation
+        // Auto-load if username is set
+        window.onload = () => {
+            const username = document.getElementById('username').value;
+            if (username) {
+                // Don't auto-load, let user click
+            }
+        };
     </script>
 </body>
 </html>
-    `;
-    
-    res.send(html);
-  }
-
-  /**
-   * List available projects for a user/organization
-   */
-  @Get('list')
-  async listProjects(@Query('username') username: string) {
-    return await this.projectsService.listProjects(username);
-  }
-
-  /**
-   * Save selected projects for syncing
-   */
-  @Post('select')
-  async selectProjects(@Body() body: { username: string; projectIds: string[] }) {
-    return await this.projectsService.saveSelectedProjects(body.username, body.projectIds);
-  }
-
-  /**
-   * Get currently selected projects
-   */
-  @Get('selected')
-  async getSelectedProjects(@Query('username') username: string) {
-    return await this.projectsService.getSelectedProjects(username);
-  }
-
-  /**
-   * Get tasks for a specific project
-   */
-  @Get('tasks')
-  async getProjectTasks(@Query('projectId') projectId: string) {
-    return await this.projectsService.getProjectTasks(projectId);
-  }
-
-  /**
-   * Save selected tasks for a project
-   */
-  @Post('tasks/select')
-  async selectTasks(@Body() body: { username: string; projectId: string; taskIds: string[] }) {
-    return await this.projectsService.saveSelectedTasks(body.username, body.projectId, body.taskIds);
-  }
-}
 

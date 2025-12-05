@@ -6,6 +6,7 @@ import * as path from 'path';
 export interface ProjectSelection {
   username: string;
   projectIds: string[];
+  selectedTasks?: { [projectId: string]: string[] }; // Map of projectId to array of selected task IDs
   updatedAt: string;
 }
 
@@ -160,6 +161,105 @@ export class ProjectsService {
     } catch (error) {
       this.logger.warn('Failed to load selections, returning empty array');
       return [];
+    }
+  }
+
+  /**
+   * Get tasks for a specific project
+   */
+  async getProjectTasks(projectId: string) {
+    try {
+      this.logger.log(`Fetching tasks for project: ${projectId}`);
+      const tasks = await this.githubProjectsService.fetchProjectItems(projectId);
+      
+      return {
+        success: true,
+        projectId,
+        tasks: tasks.map(task => ({
+          id: task.id,
+          title: task.content?.title || 'Untitled',
+          type: task.type,
+          state: task.content?.state,
+          assignees: task.content?.assignees || [],
+          labels: task.content?.labels || [],
+          updatedAt: task.content?.updatedAt,
+          url: task.content?.url,
+        })),
+        count: tasks.length,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to fetch tasks for project ${projectId}:`, error.message);
+      return {
+        success: false,
+        message: error.message,
+        tasks: [],
+        count: 0,
+      };
+    }
+  }
+
+  /**
+   * Save selected tasks for a project
+   */
+  async saveSelectedTasks(username: string, projectId: string, taskIds: string[]) {
+    try {
+      this.logger.log(`Saving ${taskIds.length} selected tasks for project ${projectId}`);
+      
+      const selections = this.loadSelections();
+      const index = selections.findIndex(s => s.username === username);
+      
+      if (index >= 0) {
+        // Update existing selection
+        if (!selections[index].selectedTasks) {
+          selections[index].selectedTasks = {};
+        }
+        selections[index].selectedTasks[projectId] = taskIds;
+        selections[index].updatedAt = new Date().toISOString();
+      } else {
+        // Create new selection
+        selections.push({
+          username,
+          projectIds: [],
+          selectedTasks: { [projectId]: taskIds },
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      fs.writeFileSync(this.selectionsPath, JSON.stringify(selections, null, 2));
+      
+      this.logger.log(`Saved ${taskIds.length} tasks for project ${projectId}`);
+      
+      return {
+        success: true,
+        message: `Successfully saved ${taskIds.length} tasks`,
+        projectId,
+        taskIds,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to save task selections:`, error.message);
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get selected task IDs for a project
+   */
+  getSelectedTasksForProject(username: string, projectId: string): string[] | null {
+    try {
+      const selections = this.loadSelections();
+      const selection = selections.find(s => s.username === username);
+      
+      if (selection && selection.selectedTasks && selection.selectedTasks[projectId]) {
+        return selection.selectedTasks[projectId];
+      }
+      
+      return null; // null means "all tasks" (not yet filtered)
+    } catch (error) {
+      this.logger.error(`Failed to get selected tasks:`, error.message);
+      return null;
     }
   }
 }

@@ -363,11 +363,14 @@ export class SyncService {
       this.logger.log(`Found ${selectedProjectIds.length} selected projects`);
 
       const items = await this.githubProjectsService.fetchItemsFromProjects(selectedProjectIds);
-      stats.totalItems = items.length;
+      
+      // Filter items based on user's task selections
+      const filteredItems = this.filterItemsBySelection(items);
+      stats.totalItems = filteredItems.length;
 
-      this.logger.log(`Found ${items.length} items to sync`);
+      this.logger.log(`Found ${items.length} items, syncing ${filteredItems.length} selected items`);
 
-      for (const item of items) {
+      for (const item of filteredItems) {
         try {
           const calendarEvent = this.transformProjectItemToEvent(item);
           const existingEventId = await this.calendarService.findEventByGithubIssueId(item.id);
@@ -578,6 +581,34 @@ export class SyncService {
     }
 
     return '8'; // Graphite (gray) - default
+  }
+
+  /**
+   * Filter items based on user's task selections
+   * If no specific tasks are selected for a project, all tasks from that project are synced
+   */
+  private filterItemsBySelection(items: GithubProjectItem[]): GithubProjectItem[] {
+    const username = this.configService.get<string>('GITHUB_ORGANIZATIONS') || 
+                     this.configService.get<string>('GITHUB_USERNAME') || 
+                     'albegosu'; // fallback
+
+    const filtered = items.filter(item => {
+      const selectedTasks = this.projectsService.getSelectedTasksForProject(username, item.project.id);
+      
+      // If null, it means no filtering - sync all tasks from this project
+      if (selectedTasks === null) {
+        return true;
+      }
+      
+      // Otherwise, only sync if task is in the selected list
+      return selectedTasks.includes(item.id);
+    });
+
+    if (filtered.length < items.length) {
+      this.logger.log(`Filtered ${items.length} items to ${filtered.length} based on user selection`);
+    }
+
+    return filtered;
   }
 }
 
